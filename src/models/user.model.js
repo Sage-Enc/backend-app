@@ -1,4 +1,6 @@
 import {Schema, model} from "mongoose";
+import bcrpyt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
     {
@@ -46,6 +48,42 @@ const userSchema = new Schema(
     },
     {timestamps: true}
 );
+
+userSchema.pre("save", async function(next){
+    if(!this.isModified("password")) return next();
+
+    this.password = bcrpyt.hash(this.password, 10);
+    next();
+})
+
+userSchema.methods.isPasswordCorrect = async function (password) {
+    return await bcrpyt.compare(password, this.password);
+}
+
+userSchema.methods.generateAccessToken = async function(){
+    jwt.sign({
+        _id: this._id,
+        email: this.email,
+        userName: this.userName,
+        fullName: this.fullName,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+        expiresIn: ACCESS_TOKEN_EXPIRY,
+    }
+    )
+}
+
+userSchema.methods.generateAccessToken = async function(){
+    jwt.sign({
+        _id: this._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+        expiresIn: REFRESH_TOKEN_EXPIRY,
+    }
+    )
+}
 
 const User = new model("User", userSchema)
 
