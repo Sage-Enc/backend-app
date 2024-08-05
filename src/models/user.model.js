@@ -12,7 +12,7 @@ const userSchema = new Schema(
             trim: true,
             index: true
         },
-        userName: {
+        email: {
             type: String,
             required: true,
             unique: true,
@@ -74,7 +74,7 @@ userSchema.methods.generateAccessToken = async function(){
     )
 }
 
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateRefreshToken = async function(){
     jwt.sign({
         _id: this._id,
     },
