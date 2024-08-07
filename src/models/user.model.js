@@ -29,7 +29,7 @@ const userSchema = new Schema(
             type: String, // Cloudinary Used
             required: true,
         },
-        coverImg : {
+        coverImage : {
             type: String,
         },
         watchHistory: {
