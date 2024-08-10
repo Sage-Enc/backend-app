@@ -248,7 +248,9 @@ const updateAvatar = asyncHandler( async (req,res)=>{
     }
 
     // Delete Previous Avatar From The Cloudinary
-    await deleteFromCloudinary(userCurrentAvatar);
+    if(userCurrentAvatar){
+        await deleteFromCloudinary(userCurrentAvatar);
+    }
 
     // Get and Update User in Database
     const user = await User.findByIdAndUpdate(
