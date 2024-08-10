@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {apiError} from "../utils/apiError.js";
 import {User} from "../models/user.model.js";
-import { uploadOnCloudinary } from "../utils/Cloudinary.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/Cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import fs from "fs";
 import jwt from "jsonwebtoken";
@@ -176,13 +176,147 @@ const refreshingRToken = asyncHandler( async(req, res)=>{
         .cookie("refreshToken", refreshToken, options)
         .json(new apiResponse(200, {accessToken, refreshToken}, "Access Token Refreshed"))
     } catch (error) {
-        
+        throw new apiError(500, error?.message || "Something Went Wrong While Refreshing Token");
     }
+})
+
+const changeCurrentPassword = asyncHandler( async (req, res) =>{
+    const {oldPassword, newPassword} = req.body;
+
+    const user = await User.findById(req.user?._id);
+    const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+
+    if(!isPasswordValid){
+        throw new apiError(401, "Invalid Old Password");
+    }
+
+    user.password = newPassword;
+    await user.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, {}, "Password is Updated Successfully"));
+})
+
+const getCurrentUser = asyncHandler( async (req, res) => {
+    return res
+    .status(200)
+    .json(new apiResponse(200, req.user, "Current User Fetched Successfully"));
+})
+
+const updateAccountDetails = asyncHandler( async (req, res) => {
+    const { fullName, email } = req.body;
+
+    if(!fullName && !email){
+        throw new apiError(400, "No Full Name or Email found");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
+                email: email
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, user, "Account Details Updated Successfully"));
+})
+
+const updateAvatar = asyncHandler( async (req,res)=>{
+    // Get Current User's Current Avatar
+    let userCurrentAvatar = req.user?.avatar;
+
+    // Get User's New Selected Avatar
+    const avatarLocalPath = req.file?.path;
+
+    if(!avatarLocalPath){
+        throw new apiError(400, "Avatar File is Missing");
+    }
+
+    // Upload User's New Selected Avatar
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+    if(!avatar.url){
+        throw new apiError(400, "Error While Uploading The Avatar");
+    }
+
+    // Delete Previous Avatar From The Cloudinary
+    await deleteFromCloudinary(userCurrentAvatar);
+
+    // Get and Update User in Database
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                avatar: avatar.url
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password");
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, user, "Avatar Updated Successfully"));
+})
+
+const updateCoverImage = asyncHandler( async (req,res)=>{
+    // Get Current User's Current Cover Image
+    let userCurrentCoverImage = req.user?.coverImage;
+    
+    // Get User's New Selected Cover Image
+    const coverImageLocalPath = req.file?.path;
+
+    if(!coverImageLocalPath){
+        throw new apiError(400, "Cover Image File is Missing");
+    }
+
+    // Upload User's New Selected Cover Image
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+    if(!coverImage.url){
+        throw new apiError(400, "Error While Uploading The Cover Image");
+    }
+
+    // Delete Previous Avatar From The Cloudinary
+    if(userCurrentCoverImage){
+        await deleteFromCloudinary(userCurrentCoverImage);
+    }
+
+    // Get and Update User in Database
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                coverImage: coverImage.url
+            }
+        },
+        {
+            new: true
+        }
+    ).select("-password");
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, user, "Cover Image Updated Successfully"));
 })
 
 export { 
     registerUser,
     loginUser,
     logoutUser,
-    refreshingRToken
+    refreshingRToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateAvatar,
+    updateCoverImage
  };

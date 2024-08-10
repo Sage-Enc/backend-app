@@ -26,4 +26,22 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 }
 
-export {uploadOnCloudinary};
+const deleteFromCloudinary = async (fileUrl) => {
+    try {
+        if(!fileUrl) return null;
+
+        // Get Image Name using Image URL
+        const arrayURL = fileUrl.split("/") // Makes the array of the URL. Splitting from "/"
+        const imageNameExt = arrayURL.pop() // Gives the last element of the array eg. "sample.jpg"
+        const imageName = imageNameExt.split(".")[0];
+
+        // Delete File From Cloudinary using imageName
+        const response = await cloudinary.uploader.destroy(imageName, {resource_type: "image"})
+
+        return response;
+    } catch (error) {
+        return null;
+    }
+}
+
+export {uploadOnCloudinary, deleteFromCloudinary};
