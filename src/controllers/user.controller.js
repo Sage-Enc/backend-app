@@ -58,7 +58,7 @@ const registerUser = asyncHandler( async (req,res)=>{
 
     // Upload them on the Cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    const coverImage = coverImageLocalPath? await uploadOnCloudinary(coverImageLocalPath): "";
     
     if(!avatar){
         throw new apiError(400, "Avatar is Required");

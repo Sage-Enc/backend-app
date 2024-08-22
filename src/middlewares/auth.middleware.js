@@ -20,6 +20,7 @@ const verifyJWT = asyncHandler(async (req, res, next)=>{
         }
     
         req.user = user;
+        console.log("Router called")
         next()
     } catch (error) {
         throw new apiError(401, error?.message || "Invalid Message Token")
