@@ -1,12 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {apiError} from "../utils/apiError.js";
-import {User} from "../models/user.model.js";
-import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/Cloudinary.js";
+import User from "../models/user.model.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import { pipeline } from "stream";
 
 const generateAccessAndRefreshToken = async (userId) =>{
     try {
@@ -96,8 +95,6 @@ const loginUser = asyncHandler( async (req,res)=>{
     // Get Login Data From The Client
     const { userName, email, password } = req.body;
 
-    console.log(userName, email, password)
-
     // Validate userName or email
     if( !userName && !email){
         throw new apiError(400, "Username or Email Required.");
@@ -112,7 +109,7 @@ const loginUser = asyncHandler( async (req,res)=>{
     if( !user ){
         throw new apiError(404, "Username or Email Not Found.");
     };
-    console.log(user)    
+
     const isPasswordValid = await user.isPasswordCorrect(password)
 
     if(!isPasswordValid){
