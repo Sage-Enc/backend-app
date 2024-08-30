@@ -10,7 +10,90 @@ import {uploadOnCloudinary, deleteFromCloudinary, deleteVideoFromCloudinary} fro
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+    const pipeline = [];
 
+    if(query){
+        pipeline.push({
+            $search: {
+                $index: "search-videos",
+                $text: {
+                    $query: query,
+                    $path: ["$title", "$description"]
+                }
+            }
+        })
+    }
+
+    if(userId){
+        if(!isValidObjectId(userId)){
+            throw new apiError(400, "Invalid User Id");
+        }
+
+        pipeline.push({
+            $match: {
+                uploader: new mongoose.Types.ObjectId(userId)
+            }
+        })
+    }
+
+    pipeline.push({ $match: { isPublished: true } });
+
+    if(sortBy && sortType){
+        pipeline.push({
+            $sort: {
+                [sortBy]: sortType === "asc"? 1 : -1
+            }
+        });
+    }else{
+        pipeline.push({
+            $sort: {
+                createdAt: -1
+            }
+        })
+    }
+
+    pipeline.push(
+        {
+            $lookup: {
+                from: "users",
+                localFieldL: "uploader",
+                foreignField: "_id",
+                as: "uploader",
+                pipeline: [
+                    {
+                        $project: {
+                            avatar: 1,
+                            userName: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$uploader"
+        }
+    )
+
+    const videoAggregation = await Video.aggregate(pipeline);
+
+    if(!videoAggregation){
+        throw new apiError(400, "Failed To Fetch Videos");
+    }
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    };
+
+    const videos = await Video.aggregatePaginate(videoAggregation, options);
+
+    if(!videos){
+        throw new apiError(400, "Failed To Fetch Videos");
+    }
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, videos, "Videos Fetched Successfully"))
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
